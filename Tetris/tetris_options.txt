@@ -1,0 +1,9 @@
+SIZE_X: 10
+SIZE_Y: 20
+falling_speed: 1.5
+FPS: 5
+HARDMODE: True
+ALL_FALLING_TYPE: L->,L<-,I,T,Z->,Z<-,#
+
+
+# Все возможные - ["L->", "L<-", "I", "T", "Z->", "Z<-", "#"] 
