@@ -25,6 +25,8 @@ struct list
         iterator(node * now): now(now) {}
         iterator(value_type value, node * prev, node * next)
             : now(new node(value, prev, next)) {}
+        iterator(const iterator& copy) 
+            : iterator(copy.now) {}
 
         public:
             inline bool operator == (const iterator & compared) const
@@ -34,7 +36,7 @@ struct list
                 {return !( *this == compared);}
 
             inline value_type & operator * () const
-                {return * now->value;}
+                {return *now->value;}
 
             inline iterator & operator++()
             {
@@ -42,23 +44,23 @@ struct list
                 return *this;
             }
             
-            inline iterator & operator++(int)
+            inline iterator operator++(int)
             {
                 iterator temp (*this);
-                ++*temp;
+                ++*this;
                 return temp;
             }
 
             inline iterator & operator--()
             {
                 now = now->prev;
-                return * this;
+                return *this;
             }
             
-            inline iterator & operator --(int)
+            inline iterator operator --(int)
             {
                 iterator temp (*this);
-                --*temp;
+                --*this;
                 return temp;
             }
     };
@@ -72,13 +74,13 @@ struct list
     ~list()
     {
         node * del_node = begin_node;
-        node * next_node = begin_node -> next;
+        node * next_node = begin_node->next;
 
-        for (int i = 0; i < list_size; ++i)
+        while (next_node != end_node)
         {
             delete del_node;
             del_node = next_node;
-            next_node = next_node -> next;
+            next_node = next_node->next;
         }
         delete end_node;
 
@@ -90,7 +92,8 @@ struct list
         end_node->prev = begin_node;
     }
     
-    list() : begin_node(new node(value_type())) {default_nodes_init();}
+    list() : begin_node(new node(value_type())) 
+        {default_nodes_init();}
     
     list(std::initializer_list<value_type> args) : begin_node(nullptr)
     {
@@ -100,7 +103,40 @@ struct list
         
         for (; arg != args.end(); ++arg)
             push_back(*arg);
+    }
+
+    list(const list& copy) : begin_node(nullptr)
+    {
+        auto iter = copy.begin();
+        begin_node = new node(*iter++);
+        default_nodes_init();
+
+        for (; iter != copy.end(); ++iter)
+            push_back(*iter);
+    }
+
+    list& operator = (const list& copy)
+    {
+        auto iter_l = begin(), iter_r = copy.begin();
+        for (; iter_l != end() && iter_r != copy.end(); ++iter_l, ++iter_r)
+            *iter_l = *iter_r;
             
+        if (size() < copy.size())
+        {
+            for (; iter_r != copy.end(); ++iter_r)
+                push_back(*iter_r);
+            list_size = copy.size();
+        }
+        else if (size() > copy.size())
+        {
+            node* last_node = iter_l.now->prev;
+            while (iter_l != end())
+                delete iter_l++.now;
+            last_node->next = end_node;
+            end_node->prev = last_node;
+            list_size = copy.size();
+        }
+        return *this;
     }
 
     inline auto begin() const
