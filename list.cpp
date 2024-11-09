@@ -1,5 +1,7 @@
 #include <initializer_list>
 
+// мб нодам хранить их индекс, чтобы можно было сравнивать итераторы? (iter_l < iter_r ? : throw out_of_range("you stupid bastartd!"))
+
 template <typename value_type>
 struct list
 {
@@ -15,6 +17,7 @@ struct list
         node(value_type value): value(new value_type(value)) {}
         node(value_type value, node * prev, node * next)
             : value(new value_type(value)), prev(prev), next(next) {}
+        node(node& copy) : node(copy.value, copy.prev, copy.next) {}
     };
 
     class iterator
@@ -66,6 +69,9 @@ struct list
     };
 
     private:
+    void bind_nodes(node * first, node * second)
+        {first->next = second; second->prev = first;}
+
         node * begin_node;
         node * end_node = new node();
         unsigned int list_size = 1;
@@ -97,12 +103,11 @@ struct list
     
     list(std::initializer_list<value_type> args) : begin_node(nullptr)
     {
-        auto arg = args.begin();
-        begin_node = new node(*arg++);
+        auto iter = args.begin();
+        begin_node = new node(*iter++);
         default_nodes_init();
-        
-        for (; arg != args.end(); ++arg)
-            push_back(*arg);
+
+        push_back_range(iter, args.end());
     }
 
     list(const list& copy) : begin_node(nullptr)
@@ -111,8 +116,7 @@ struct list
         begin_node = new node(*iter++);
         default_nodes_init();
 
-        for (; iter != copy.end(); ++iter)
-            push_back(*iter);
+        push_back_range(iter, copy.end());
     }
 
     list& operator = (const list& copy)
@@ -125,18 +129,31 @@ struct list
         {
             for (; iter_r != copy.end(); ++iter_r)
                 push_back(*iter_r);
-            list_size = copy.size();
         }
         else if (size() > copy.size())
         {
+            /*
             node* last_node = iter_l.now->prev;
             while (iter_l != end())
                 delete iter_l++.now;
-            last_node->next = end_node;
-            end_node->prev = last_node;
+            bind_nodes(last_node, end_node);
             list_size = copy.size();
+            */
+           delete_range(iter_l, end());
         }
         return *this;
+    }
+
+    value_type operator [](int index) const
+    {
+        if (index == 0) return *begin();
+
+        auto iter = begin();
+        if (index > 0)
+            for (int _ = 0; _ < index; ++_, ++iter);
+        else
+            for (int _ = -1; _ < -index; ++_, --iter);
+        return *iter;
     }
 
     inline auto begin() const
@@ -167,8 +184,34 @@ struct list
     }
 
     iterator push_back(const value_type & value)
+        {return insert(end(), value);}
+
+    template <typename _Iterator>
+    void delete_range(_Iterator iter_l, const _Iterator& iter_r)
     {
-        iterator new_iter = insert(end(), value);
-        return new_iter;
+        int new_size = size();
+        node * first_bind_node = (iter_l.now == begin_node ? new node(value_type()) : iter_l.now->prev);
+        node * last_bind_node = (iter_r.now == end_node ? end_node : iter_r.now->next);
+
+        for (; iter_l != iter_r; --new_size)
+            delete iter_l++.now;
+
+        bind_nodes(first_bind_node, last_bind_node);
+        list_size = (new_size == 0 ? 1 : new_size);
+    }
+
+    template <typename _Iterator>
+    void push_back_range(_Iterator iter, const _Iterator& end_iter)
+    {
+        for (; iter != end_iter; ++iter)
+            push_back(*iter);
+    }
+
+    void print_nodes()
+    {
+        int i = 0;
+        for (auto iter = begin(); iter != end(); ++iter, ++i)
+            print(i, iter.now);
+        print(i, end_node);
     }
 };
